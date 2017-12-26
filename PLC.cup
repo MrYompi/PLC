@@ -1,0 +1,92 @@
+import java_cup.runtime.*;
+
+terminal IF, FOR, ELSE, WHILE, DO, PRINT;
+terminal AP, CP, MAS, MENOS, POR, DIV;
+terminal IGUAL, MAYOR, MENOR;
+terminal NO, AND, OR, PYC;
+terminal AL, CL;
+terminal String IDENT, ENTERO;
+
+non terminal s;
+non terminal String Lista_sent;
+non terminal String sent;
+non terminal String expresion;
+non terminal String condicion;
+
+precedence left NO;
+precedence left IGUAL;
+precedence left AND, OR;
+precedence nonassoc IF;
+precedence left MAS, MENOS;
+precedence left POR, DIV;
+precedence left AP, CP;
+precedence left AL, CL;
+precedence nonassoc ELSE;
+
+s           ::= Lista_sent:e
+                {:PLC.out.print(e);:}
+                ;
+Lista_sent  ::= Lista_sent:e1 sent:e2 {:RESULT=e1+e2;:} |
+                sent:e {:RESULT=e;:}
+                ;
+sent        ::= expresion:e PYC
+                {:RESULT=e+";\n";:} |
+                IF AP condicion:c CP sent:s
+                {:RESULT="if("+c+") goto L"+PLC.tag+";\ngoto L"+(PLC.tag+1)+";\nL"+PLC.tag+":\n"+s+"L"+(PLC.tag+1)+":\n"; PLC.tag+=2;:} |
+                IF AP condicion:c CP sent:s1 ELSE sent:s2
+                {:RESULT="if("+c+") goto L"+PLC.tag+";\ngoto L"+(PLC.tag+1)+";\nL"+PLC.tag+":\n"+s1+"goto L"+(PLC.tag+2)+";\nL"+(PLC.tag+1)+":\n"+s2+"L"+(PLC.tag+2)+":\n";PLC.tag+=3;:} |
+                WHILE AP condicion:c CP sent:s
+                {:RESULT="L"+(PLC.tag+2)+":\nif("+c+") goto L"+PLC.tag+";\ngoto L"+(PLC.tag+1)+";\nL"+PLC.tag+":\n"+s+"goto L"+(PLC.tag+2)+";\nL"+(PLC.tag+1)+":\n"; PLC.tag+=3;:} |
+                DO sent:s WHILE AP condicion:c CP PYC
+                {:RESULT="L"+PLC.tag+":\n"+s+"if("+c+") goto L"+PLC.tag+";\n";PLC.tag++;:} |
+                FOR AP expresion:e1 PYC condicion:c PYC expresion:e2 CP sent:s
+                {:RESULT=e1+";\nL"+PLC.tag+":\nif("+c+") goto L"+(PLC.tag+1)+";\ngoto L"+(PLC.tag+2)+";\nL"+(PLC.tag+1)+":\n"+s+e2+";\ngoto L"+PLC.tag+";\nL"+(PLC.tag+2)+":\n";PLC.tag+=3;:} |
+                PRINT AP expresion:e CP PYC
+                {:RESULT="print "+e+";\n";:} |
+                AL Lista_sent:e CL
+                {:RESULT=e;:}
+                ;
+expresion   ::= expresion:e1 MAS expresion:e2
+                {:RESULT=e1+"+"+e2;:} |
+                expresion:e1 MENOS expresion:e2
+                {:RESULT=e1+"-"+e2;:} |
+                expresion:e1 POR expresion:e2
+                {:RESULT=e1+"*"+e2;:} |
+                expresion:e1 DIV expresion:e2
+                {:RESULT=e1+"/"+e2;:} |
+                MENOS expresion:e
+                {:RESULT="-"+e;:} |
+                AP expresion:e CP
+                {:RESULT="("+e+")";:} |
+                IDENT:i IGUAL expresion:e
+                {:RESULT=i+"="+e;:} |
+                IDENT:e
+                {:RESULT=e;:} |
+                ENTERO:n
+                {:RESULT=n;:}
+                ;
+condicion   ::= expresion:e1 IGUAL IGUAL expresion:e2
+                {:RESULT=e1+"=="+e2;:} |
+                expresion:e1 NO IGUAL expresion:e2
+                {:RESULT=e1+"!="+e2;:} |
+                expresion:e1 MENOR expresion:e2
+                {:RESULT=e1+"<"+e2;:} |
+                expresion:e1 MENOR IGUAL expresion:e2
+                {:RESULT=e1+"<="+e2;:} |
+                expresion:e1 IGUAL MENOR expresion:e2
+                {:RESULT=e1+"<="+e2;:} |
+                expresion:e1 MAYOR expresion:e2
+                {:RESULT=e1+">"+e2;:} |
+                expresion:e1 MAYOR IGUAL expresion:e2
+                {:RESULT=e1+">="+e2;:} |
+                expresion:e1 IGUAL MAYOR expresion:e2
+                {:RESULT=e1+"=>"+e2;:} |
+                NO condicion:c
+                {:RESULT="! +c";:} |
+                condicion:c1 AND condicion:c2
+                {:RESULT=c1+"&&"+c2;:} |
+                condicion:c1 OR condicion:c2
+                {:RESULT=c1+"||"+c2;:} |
+                AP condicion:c CP
+                {:RESULT="("+c+")";:}
+                ;
