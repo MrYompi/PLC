@@ -19,6 +19,7 @@ String aux="";
 "*"         {return new Symbol(sym.POR);}
 "/"         {return new Symbol(sym.DIV);}
 "="         {return new Symbol(sym.IGUAL);}
+"=="        {return new Symbol(sym.IGUALCOMP);}
 ">"         {return new Symbol(sym.MAYOR);}
 "<"         {return new Symbol(sym.MENOR);}
 "!"         {return new Symbol(sym.NO);}

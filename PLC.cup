@@ -1,8 +1,8 @@
 import java_cup.runtime.*;
 
 terminal IF, FOR, ELSE, WHILE, DO, PRINT;
-terminal AP, CP, MAS, MENOS,UMENOS, POR, DIV;
-terminal IGUAL, MAYOR, MENOR;
+terminal AP, CP, MAS, MENOS, UMENOS, POR, DIV;
+terminal IGUAL, IGUALCOMP, MAYOR, MENOR;
 terminal NO, AND, OR, PYC;
 terminal AL, CL;
 terminal String IDENT, ENTERO;
@@ -16,7 +16,6 @@ non terminal String condicion;
 precedence left NO;
 precedence left IGUAL;
 precedence left AND, OR;
-precedence nonassoc IF;
 precedence left MAS, MENOS;
 precedence left POR, DIV;
 precedence left AP, CP;
@@ -43,22 +42,22 @@ sent        ::= expresion:e PYC
                 FOR AP expresion:e1 PYC condicion:c PYC expresion:e2 CP sent:s
                 {:RESULT=PLC.get(e1)+"L"+PLC.tag+":\n"+PLC.get(c)+"if("+c+") goto L"+(PLC.tag+1)+";\ngoto L"+(PLC.tag+2)+";\nL"+(PLC.tag+1)+":\n"+s+PLC.get(e2)+"goto L"+PLC.tag+";\nL"+(PLC.tag+2)+":\n";PLC.tag+=3;:} |
                 PRINT AP expresion:e CP PYC
-                {:RESULT=PLC.get(e)+"print "+e+";\n";:} |
+                {:RESULT=PLC.get(e)+"print "+PLC.head(e)+";\n";:} |
                 AL Lista_sent:e CL
                 {:RESULT=e;:}
                 ;
 expresion   ::= expresion:e1 MAS expresion:e2
-                {:PLC.tmp++;RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"+"+e2+";\n");:} |
+                {:RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"+"+e2+";\n");PLC.tmp++;:} |
                 expresion:e1 MENOS expresion:e2
-                {:PLC.tmp++;RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"-"+e2+";\n");:} |
+                {:RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"-"+e2+";\n");PLC.tmp++;:} |
                 expresion:e1 POR expresion:e2
-                {:PLC.tmp++;RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"*"+e2+";\n");:} |
+                {:RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"*"+e2+";\n");PLC.tmp++;:} |
                 expresion:e1 DIV expresion:e2
-                {:PLC.tmp++;RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"/"+e2+";\n");:} |
+                {:RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e1)+PLC.get(e2)+RESULT+"="+e1+"/"+e2+";\n");PLC.tmp++;:} |
                 MENOS expresion:e
-                {:PLC.tmp++;RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e)+RESULT+"=-"+e+";\n");:} %prec UMENOS |
+                {:RESULT="$t"+PLC.tmp; PLC.table.put(RESULT,PLC.get(e)+RESULT+"=-"+e+";\n");PLC.tmp++;:} %prec UMENOS |
                 AP expresion:e CP
-                {:RESULT="("+e+")";:} |
+                {:RESULT=e;:} |
                 IDENT:i IGUAL expresion:e
                 {:RESULT=i+"="+PLC.head(e)+";\n";PLC.table.put(RESULT,PLC.get(e)+RESULT);:} |
                 IDENT:e
@@ -66,28 +65,28 @@ expresion   ::= expresion:e1 MAS expresion:e2
                 ENTERO:n
                 {:RESULT=n;:}
                 ;
-condicion   ::= expresion:e1 IGUAL IGUAL expresion:e2
-                {:RESULT=e1+"=="+e2;:} |
+condicion   ::= expresion:e1 IGUALCOMP expresion:e2
+                {:RESULT=PLC.head(e1)+"=="+PLC.head(e2); PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2));:} |
                 expresion:e1 NO IGUAL expresion:e2
-                {:RESULT=e1+"!="+e2;:} |
+                {::} |
                 expresion:e1 MENOR expresion:e2
                 {:RESULT=PLC.head(e1)+"<"+PLC.head(e2); PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2));:} |
                 expresion:e1 MENOR IGUAL expresion:e2
-                {:RESULT=e1+"<="+e2;:} |
+                {:RESULT=e1+"<"+"$t"+PLC.tmp;PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2)+"$t"+PLC.tmp+"="+e2+"+1;\n");PLC.tmp++;:} |
                 expresion:e1 IGUAL MENOR expresion:e2
-                {:RESULT=e1+"<="+e2;:} |
-                expresion:e1 MAYOR expresion:e2
-                {:RESULT=PLC.head(e2)+"<"+PLC.head(e1); PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2));:} |
-                expresion:e1 MAYOR IGUAL expresion:e2
-                {:RESULT=e1+">="+e2;:} |
-                expresion:e1 IGUAL MAYOR expresion:e2
-                {:RESULT=e1+"=>"+e2;:} |
+                {:RESULT=e1+"<"+"$t"+PLC.tmp;PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2)+"$t"+PLC.tmp+"="+e2+"+1;\n");PLC.tmp++;:} |
+                expresion:e2 MAYOR expresion:e1
+                {:RESULT=PLC.head(e1)+"<"+PLC.head(e2); PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2));:} |
+                expresion:e2 MAYOR IGUAL expresion:e1
+                {:RESULT=e1+"<"+"$t"+PLC.tmp;PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2)+"$t"+PLC.tmp+"="+e2+"+1;\n");PLC.tmp++;:} |
+                expresion:e2 IGUAL MAYOR expresion:e1
+                {:RESULT=e1+"<"+"$t"+PLC.tmp;PLC.table.put(RESULT, PLC.get(e1)+PLC.get(e2)+"$t"+PLC.tmp+"="+e2+"+1;\n");PLC.tmp++;:} |
                 NO condicion:c
-                {:RESULT="! +c";:} |
+                {::} |
                 condicion:c1 AND condicion:c2
-                {:RESULT=c1+"&&"+c2;:} |
+                {::} |
                 condicion:c1 OR condicion:c2
-                {:RESULT=c1+"||"+c2;:} |
+                {::} |
                 AP condicion:c CP
-                {:RESULT="("+c+")";:}
+                {:RESULT=c;:}
                 ;
